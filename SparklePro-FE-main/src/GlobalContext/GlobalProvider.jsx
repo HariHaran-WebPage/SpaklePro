@@ -17,35 +17,32 @@ function GlobalProvider({ children }) {
   const [subData, setSubData] = useState([]);
   const [heading, setHeading] = useState("");
   const [bookingData, setBookingData] = useState([]);
-  const [userReviews,setUserReviews] = useState([]);
-  const [updateUserReviews, setUpdateUserReviews] = useState('');
+  const [userReviews, setUserReviews] = useState([]);
+  const [updateUserReviews, setUpdateUserReviews] = useState("");
   const [checkListTask, setCheckListTask] = useState([]);
-  const [allBookings,setAllBookings] = useState([]);
-  const [userId, setUserId] = useState('');
-  const [globalUserNotifications,setGlobalUserNotifications] = useState([]);
-  const [messageSocket, setMessageSocket] = useState('');
-  const [initiateSocket,setInitiateSocket] = useState(false);
-
+  const [allBookings, setAllBookings] = useState([]);
+  const [userId, setUserId] = useState("");
+  const [globalUserNotifications, setGlobalUserNotifications] = useState([]);
+  const [messageSocket, setMessageSocket] = useState("");
+  const [initiateSocket, setInitiateSocket] = useState(false);
 
   let loginUser;
-  if(localStorage.token){
-      const jwt = localStorage.getItem('token');
-      loginUser = jwtDecode(jwt)
-      // if(Date.now() < loginUser.exp*1000){
-        setAuthToken(jwt);
-      // } else {
-      //   alert("Token Expired Please login again!");
-        // navigate('/logout');
-      // }
+  if (localStorage.token) {
+    const jwt = localStorage.getItem("token");
+    loginUser = jwtDecode(jwt);
+    // if(Date.now() < loginUser.exp*1000){
+    setAuthToken(jwt);
+    // } else {
+    //   alert("Token Expired Please login again!");
+    // navigate('/logout');
+    // }
   }
 
-  useEffect(()=>{
-    if(loginUser){
+  useEffect(() => {
+    if (loginUser) {
       setUserId(loginUser._id);
     }
-  },[loginUser])
-
-
+  }, [loginUser]);
 
   const getUserProfile = async () => {
     const { data } = await http.get("/user/getProfile");
@@ -74,8 +71,8 @@ function GlobalProvider({ children }) {
       serviceType: bookData.serviceType,
       address: bookData.address,
       uniqueBookingID: bookData.uniqueBookingID,
-      username:bookData.username,
-      email:bookData.email,
+      username: bookData.username,
+      email: bookData.email,
     });
   };
 
@@ -133,15 +130,18 @@ function GlobalProvider({ children }) {
   };
 
   const editUserBooking = async (updatedContent) => {
-    const result = await http.put(`/booking/update/${updatedContent.userBookingID}`, {
-      date: updatedContent.date,
-      address: updatedContent.address,
-      status: updatedContent.status,
-      serviceType: updatedContent.serviceType,
-    });
-    if(result.status == 200){
-      alert('Booking Updated Successfully')
-      navigate('/user-bookings')
+    const result = await http.put(
+      `/booking/update/${updatedContent.userBookingID}`,
+      {
+        date: updatedContent.date,
+        address: updatedContent.address,
+        status: updatedContent.status,
+        serviceType: updatedContent.serviceType,
+      }
+    );
+    if (result.status == 200) {
+      alert("Booking Updated Successfully");
+      navigate("/user-bookings");
     }
   };
 
@@ -150,113 +150,112 @@ function GlobalProvider({ children }) {
     getUserBookings();
   };
 
-  const createReview = async (_id,userReview) => {
+  const createReview = async (_id, userReview) => {
     await http.post(`/booking/review/${_id}`, userReview);
-  }
+  };
 
   const getUserReview = async (_id) => {
-    const {data} = await http.get(`/booking/review/${_id}`);
+    const { data } = await http.get(`/booking/review/${_id}`);
     setUserReviews(data.review);
-  }
+  };
 
   const deleteUserReview = async (_id, deleteID) => {
-    await http.delete(`/booking/review/${_id}/${deleteID}`)
+    await http.delete(`/booking/review/${_id}/${deleteID}`);
     getUserReview(_id);
-  }
+  };
 
   const UpdateReviewFunction = async (_id, reviewID, updatedReview) => {
-    await http.put(`/booking/review/${_id}/${reviewID}`,updatedReview);
+    await http.put(`/booking/review/${_id}/${reviewID}`, updatedReview);
     getUserReview(_id);
-  }
+  };
 
+  //CEHCKLIST
+  const getUserChecklist = async () => {
+    const { data } = await http.get(`/checklist/get`);
+    setCheckListTask(data.CheckListdata);
+  };
 
-  //CEHCKLIST 
-  const getUserChecklist = async ()=>{
-     const {data} = await http.get(`/checklist/get`);
-     setCheckListTask(data.CheckListdata);
-  }
-
-  const addUserCehckList = async(newCheckListData) => {
-    await http.post("/checklist/create",newCheckListData);
+  const addUserCehckList = async (newCheckListData) => {
+    await http.post("/checklist/create", newCheckListData);
     getUserChecklist();
-  }
+  };
 
-  const editUserCheckList = async(_id,updatedChecklist) => {
-    await http.put(`/checklist/update/${_id}`,updatedChecklist);
+  const editUserCheckList = async (_id, updatedChecklist) => {
+    await http.put(`/checklist/update/${_id}`, updatedChecklist);
     getUserChecklist();
-  }
+  };
 
-  const deleteUserCheckList = async(_id)=>{
+  const deleteUserCheckList = async (_id) => {
     await http.delete(`/checklist/delete/${_id}`);
     getUserChecklist();
-  }
-
+  };
 
   //ADMIN
   const getAllUserBookings = async () => {
-    const {data} = await http.get('/admin/get-bookings');
-    setAllBookings(data.All_Users_Bookings)
-};
-
-  const updateUserBooking = async(_id,UpdatedData) => {
-    await http.put(`/admin/update-booking/${_id}`,UpdatedData);
-    getAllUserBookings();
-  }
-
-
-// SOCKET.IO  //NOTIFICATION
-useEffect(() => {
-  // const socket = io("https://cleanease-backend-780q.onrender.com", {
-      const socket = io("http://localhost:3000", {
-    transports: ["websocket", "polling"],
-    withCredentials: true,
-  });
-
-  setMessageSocket(socket);
-
-  // Join room using userId
-  if (userId) {
-    socket.emit("joinRoom", userId);
-  }
-
-  // Handle booking status updates
-  socket.on("bookingStatusUpdated", (data) => {
-    getUserNotifications();
-    if(data.userId == userId){
-      toast.info(`Booking ${data.bookingId} is conformed and status updated to: ${data.status}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });  
-    }
-  });
-
-  // Cleanup function to disconnect socket when component unmounts
-  return () => {
-    socket.disconnect();
+    const { data } = await http.get("/admin/get-bookings");
+    setAllBookings(data.All_Users_Bookings);
   };
-}, [userId, initiateSocket]);
 
+  const updateUserBooking = async (_id, UpdatedData) => {
+    await http.put(`/admin/update-booking/${_id}`, UpdatedData);
+    getAllUserBookings();
+  };
 
-// NOTIFICATION GENERATE BY ADMIN
-const generateNotification = async(data) => {
-  await http.post('/notification/create',data);
-}
+  // SOCKET.IO  //NOTIFICATION
+  useEffect(() => {
+    // const socket = io("https://cleanease-backend-780q.onrender.com", {
+    const socket = io("https://spaklepro.onrender.com", {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+    });
 
-useEffect(()=>{
-  if(loginUser){
+    setMessageSocket(socket);
+
+    // Join room using userId
+    if (userId) {
+      socket.emit("joinRoom", userId);
+    }
+
+    // Handle booking status updates
+    socket.on("bookingStatusUpdated", (data) => {
+      getUserNotifications();
+      if (data.userId == userId) {
+        toast.info(
+          `Booking ${data.bookingId} is conformed and status updated to: ${data.status}`,
+          {
+            position: "top-right",
+            autoClose: 5000,
+          }
+        );
+      }
+    });
+
+    // Cleanup function to disconnect socket when component unmounts
+    return () => {
+      socket.disconnect();
+    };
+  }, [userId, initiateSocket]);
+
+  // NOTIFICATION GENERATE BY ADMIN
+  const generateNotification = async (data) => {
+    await http.post("/notification/create", data);
+  };
+
+  useEffect(() => {
+    if (loginUser) {
+      getUserNotifications();
+    }
+  }, []);
+
+  const getUserNotifications = async () => {
+    const { data } = await http.get("/notification/get");
+    setGlobalUserNotifications(data.notification);
+  };
+
+  const deleteUserNotification = async (_id) => {
+    await http.delete(`/notification/delete/${_id}`);
     getUserNotifications();
-  }
-},[])
-
-const getUserNotifications = async() => {
-  const {data} = await http.get('/notification/get');
-  setGlobalUserNotifications(data.notification);
-}
-
-const deleteUserNotification = async(_id) => {
-  await http.delete(`/notification/delete/${_id}`);
-  getUserNotifications();
-}
+  };
 
   return (
     <GlobalContext.Provider
@@ -280,7 +279,7 @@ const deleteUserNotification = async(_id) => {
         getUserReview,
         userReviews,
         deleteUserReview,
-        updateUserReviews, 
+        updateUserReviews,
         setUpdateUserReviews,
         UpdateReviewFunction,
         getUserChecklist,
@@ -298,7 +297,7 @@ const deleteUserNotification = async(_id) => {
         deleteUserNotification,
         messageSocket,
         setInitiateSocket,
-        initiateSocket
+        initiateSocket,
       }}
     >
       {children}
